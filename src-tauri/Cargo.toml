@@ -1,0 +1,35 @@
+[package]
+name = "openjarvis"
+version = "0.1.0"
+description = "OpenJarvis — desktop AI terminal assistant"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "openjarvis_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-notification = "2"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "stream", "multipart"] }
+base64 = "0.22"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures-util = "0.3"
+anyhow = "1"
+rodio = "0.20"
+dotenvy = "0.15"
+rmcp = { version = "1.4.0", features = [
+    "client",
+    "transport-child-process",
+    "which-command",
+] }
+
+

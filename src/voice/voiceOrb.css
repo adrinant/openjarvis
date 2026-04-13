@@ -1,0 +1,76 @@
+/* Right column: orb fills sidebar; terminal stays visible in the left column. */
+.voice-orb-panel {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  pointer-events: auto;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse 90% 70% at 50% 36%,
+    rgba(48, 40, 14, 0.55) 0%,
+    rgba(5, 5, 8, 0.98) 58%
+  );
+}
+
+.voice-orb-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.voice-orb-chrome {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 0.75rem 1rem 1.25rem;
+  width: 100%;
+  max-width: 20rem;
+}
+
+.voice-orb-title {
+  margin: 0 0 0.35rem;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(251, 219, 100, 0.95);
+}
+
+.voice-orb-hint {
+  margin: 0 0 1rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: rgba(180, 180, 195, 0.95);
+}
+
+.voice-orb-hint kbd {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.85em;
+}
+
+.voice-orb-cancel {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 219, 100, 0.5);
+  background: rgba(251, 219, 100, 0.12);
+  color: rgba(236, 236, 241, 0.95);
+  cursor: pointer;
+}
+
+.voice-orb-cancel:hover {
+  background: rgba(251, 219, 100, 0.22);
+}

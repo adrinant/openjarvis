@@ -1,0 +1,17 @@
+# Local SearXNG for OpenJarvis (JSON API enabled in searxng/settings.yml).
+# Start:  docker compose -f docker-compose.searxng.yml up -d
+# Stop:   docker compose -f docker-compose.searxng.yml down
+# Logs:   docker compose -f docker-compose.searxng.yml logs -f
+#
+# Then set MCP SEARXNG_URL to http://127.0.0.1:8080 (see mcp-servers.example.json).
+services:
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: openjarvis-searxng
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      SEARXNG_BASE_URL: http://127.0.0.1:8080/
+    restart: unless-stopped

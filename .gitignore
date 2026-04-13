@@ -1,0 +1,36 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Local MCP config (may contain tokens)
+mcp-servers.json
+
+# API keys (loaded by Rust via dotenvy — see .env.example)
+.env
+
+# SearXNG Docker volume — keep settings.yml; ignore runtime/generated files
+searxng/*
+!searxng/settings.yml
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+reference

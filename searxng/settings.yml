@@ -1,0 +1,15 @@
+# SearXNG settings for OpenJarvis + mcp-searxng.
+# JSON format must be enabled or the MCP server gets 403 from /search?format=json.
+# Reference: https://docs.searxng.org/admin/settings/settings.html
+
+use_default_settings: true
+
+server:
+  # Change this if you expose SearXNG beyond localhost.
+  secret_key: "openjarvis-local-dev-change-me"
+  limiter: false
+
+search:
+  formats:
+    - html
+    - json
