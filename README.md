@@ -3,6 +3,20 @@
 OpenJarvis is a desktop AI assistant built with Tauri + React + Rust.  
 It provides a terminal-style chat UI, streamed model responses, MCP tool-calling, and voice input with optional wake triggers.
 
+## Latest Release Notes
+
+### 2026-04-13
+
+- Added **system tray mode** with `Show OpenJarvis` and `Quit` actions.
+- Window close now sends the app to **standby in tray** instead of exiting.
+- Added clap wake flow that restores the app window, sets it **always on top**, and focuses it.
+- Added spoken wake greeting based on local time:
+  - `Good morning sir`
+  - `Good afternoon sir`
+  - `Good evening sir`
+- Improved double-clap detection reliability with a lower default threshold and wider clap timing window.
+- Added optional tuning env var: `VITE_WAKE_DOUBLE_CLAP_THRESHOLD` (lower = more sensitive).
+
 ## Current Features
 
 - Chat UI powered by xterm-style terminal rendering
