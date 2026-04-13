@@ -12,7 +12,11 @@ use commands::McpState;
 use mcp::McpPool;
 use std::path::Path;
 use std::sync::Arc;
-use tauri::{Emitter, Manager};
+use tauri::{
+    menu::{MenuBuilder, MenuItemBuilder},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager, WindowEvent,
+};
 use tokio::sync::Mutex;
 
 /// Load `.env` from the repo root and `src-tauri/` (and finally process cwd).
@@ -48,8 +52,56 @@ pub fn run() {
             commands::get_mcp_servers,
             commands::reload_mcp_config,
             commands::elevenlabs_transcribe_audio,
+            commands::wake_assistant,
         ])
         .setup(|app| {
+            let show_item = MenuItemBuilder::new("Show OpenJarvis")
+                .id("show")
+                .build(app)?;
+            let quit_item = MenuItemBuilder::new("Quit")
+                .id("quit")
+                .build(app)?;
+            let tray_menu = MenuBuilder::new(app)
+                .item(&show_item)
+                .separator()
+                .item(&quit_item)
+                .build()?;
+            let app_for_tray = app.handle().clone();
+            TrayIconBuilder::new()
+                .menu(&tray_menu)
+                .on_menu_event(move |app: &tauri::AppHandle, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.unminimize();
+                            let _ = w.show();
+                            let _ = w.set_always_on_top(true);
+                            let _ = w.set_focus();
+                            let _ = w.emit("activate_voice", ());
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(move |_tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        if let Some(w) = app_for_tray.get_webview_window("main") {
+                            let _ = w.unminimize();
+                            let _ = w.show();
+                            let _ = w.set_always_on_top(true);
+                            let _ = w.set_focus();
+                            let _ = w.emit("activate_voice", ());
+                        }
+                    }
+                })
+                .build(app)?;
+
             let state = app.state::<McpState>();
             let app_mcp = app
                 .path()
@@ -87,6 +139,18 @@ pub fn run() {
                     let _ = w.emit("activate_voice", ());
                 }
             })?;
+
+            if let Some(w) = app.get_webview_window("main") {
+                let app_for_close = app.handle().clone();
+                w.on_window_event(move |e| {
+                    if let WindowEvent::CloseRequested { api, .. } = e {
+                        api.prevent_close();
+                        if let Some(win) = app_for_close.get_webview_window("main") {
+                            let _ = win.hide();
+                        }
+                    }
+                });
+            }
 
             Ok(())
         })

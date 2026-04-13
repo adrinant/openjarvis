@@ -14,9 +14,12 @@ const VAD_MAX_RECORD_MS = 60_000;
 const WAKE_RESTART_MS = 500;
 const WAKE_COOLDOWN_MS = 1800;
 const CLAP_POLL_MS = 22;
-const CLAP_THRESHOLD = 0.2;
+const DEFAULT_CLAP_THRESHOLD = 0.12;
 const CLAP_MIN_GAP_MS = 120;
-const CLAP_MAX_GAP_MS = 320;
+const CLAP_MAX_GAP_MS = 420;
+const GREET_COOLDOWN_MS = 20_000;
+
+type WakeSource = "manual" | "shortcut" | "wake_word" | "double_clap";
 
 type SpeechRecognitionLike = {
   continuous: boolean;
@@ -87,6 +90,13 @@ export function useVoice(options: VoiceOptions): {
   const wakeWordEnabled = wakeWord.length > 0;
   const clapWakeEnabled =
     (import.meta.env.VITE_WAKE_DOUBLE_CLAP as string | undefined)?.trim() === "1";
+  const clapThresholdRaw = (
+    import.meta.env.VITE_WAKE_DOUBLE_CLAP_THRESHOLD as string | undefined
+  )?.trim();
+  const clapThreshold = (() => {
+    const n = Number(clapThresholdRaw);
+    return Number.isFinite(n) && n > 0 ? n : DEFAULT_CLAP_THRESHOLD;
+  })();
 
   const setOrb = useCallback((open: boolean) => {
     orbOpenRef.current = open;
@@ -348,7 +358,28 @@ export function useVoice(options: VoiceOptions): {
   cleanupForUnmountRef.current = cleanupMedia;
   const setOrbRef = useRef(setOrb);
   setOrbRef.current = setOrb;
-  const activateVoiceRef = useRef<() => void>(() => {});
+  const activateVoiceRef = useRef<(source?: WakeSource) => void>(() => {});
+  const greetCooldownRef = useRef(0);
+
+  const greetingByTime = useCallback((): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning sir";
+    if (hour < 18) return "Good afternoon sir";
+    return "Good evening sir";
+  }, []);
+
+  const wakeWindowAndGreet = useCallback(async () => {
+    try {
+      await invoke("wake_assistant");
+      const now = Date.now();
+      if (now - greetCooldownRef.current >= GREET_COOLDOWN_MS) {
+        greetCooldownRef.current = now;
+        await invoke("speak", { text: greetingByTime() });
+      }
+    } catch {
+      /* wake/greet is best effort */
+    }
+  }, [greetingByTime]);
 
   useEffect(() => {
     if (!orbOpen) return;
@@ -407,7 +438,14 @@ export function useVoice(options: VoiceOptions): {
           optsRef.current.onVoiceIdle?.();
         }),
       );
-      register(await listen("activate_voice", () => activateVoiceRef.current()));
+      register(
+        await listen<WakeSource | null>("activate_voice", (event) => {
+          const payload = event.payload;
+          const source: WakeSource =
+            typeof payload === "string" ? payload : "shortcut";
+          activateVoiceRef.current(source);
+        }),
+      );
     })();
 
     return () => {
@@ -416,8 +454,12 @@ export function useVoice(options: VoiceOptions): {
     };
   }, []);
 
-  activateVoiceRef.current = () => {
+  activateVoiceRef.current = (source: WakeSource = "manual") => {
     const { onStatus, onVoiceIdle, assistantBusy: ab } = optsRef.current;
+    const shouldWakeWindow = source === "double_clap";
+    if (shouldWakeWindow) {
+      void wakeWindowAndGreet();
+    }
 
     if (!recordingRef.current) {
       if (ab && !orbOpenRef.current) {
@@ -513,7 +555,7 @@ export function useVoice(options: VoiceOptions): {
       const now = Date.now();
       if (now - lastWakeAt < WAKE_COOLDOWN_MS) return;
       lastWakeAt = now;
-      activateVoiceRef.current();
+      activateVoiceRef.current("wake_word");
     };
     recognition.onend = () => {
       if (stopped) return;
@@ -608,7 +650,7 @@ export function useVoice(options: VoiceOptions): {
           if (orbOpenRef.current || optsRef.current.assistantBusy) return;
 
           const level = rmsFromTimeDomain(analyser, scratch);
-          if (level < CLAP_THRESHOLD) return;
+          if (level < clapThreshold) return;
 
           const now = Date.now();
           if (now - lastClapAt < CLAP_MIN_GAP_MS) return;
@@ -623,11 +665,15 @@ export function useVoice(options: VoiceOptions): {
             pendingFirstClapAt = 0;
             if (now - lastWakeAt < WAKE_COOLDOWN_MS) return;
             lastWakeAt = now;
-            activateVoiceRef.current();
+            activateVoiceRef.current("double_clap");
           }
         }, CLAP_POLL_MS);
       } catch {
         if (!cancelled) {
+          void invoke("notify_user", {
+            title: "OpenJarvis",
+            body: "Double-clap wake failed to start. Check microphone permission.",
+          }).catch(() => {});
           optsRef.current.onStatus?.(
             `\r\n\x1b[38;2;${ACCENT_DIM_RGB.r};${ACCENT_DIM_RGB.g};${ACCENT_DIM_RGB.b}m[voice] Fast double-clap wake failed to start. Check mic permission.\x1b[0m\r\n`,
           );
@@ -639,7 +685,7 @@ export function useVoice(options: VoiceOptions): {
       cancelled = true;
       stopAll();
     };
-  }, [clapWakeEnabled]);
+  }, [clapWakeEnabled, clapThreshold]);
 
   useEffect(() => {
     return () => {

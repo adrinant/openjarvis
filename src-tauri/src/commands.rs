@@ -127,3 +127,15 @@ pub async fn reload_mcp_config(
     *state.0.lock().await = pool;
     Ok(())
 }
+
+#[tauri::command]
+pub fn wake_assistant(app: AppHandle) -> Result<(), String> {
+    let win = app
+        .get_webview_window("main")
+        .ok_or_else(|| "Main window not found.".to_string())?;
+    win.unminimize().map_err(|e| e.to_string())?;
+    win.show().map_err(|e| e.to_string())?;
+    win.set_always_on_top(true).map_err(|e| e.to_string())?;
+    win.set_focus().map_err(|e| e.to_string())?;
+    Ok(())
+}
