@@ -100,6 +100,16 @@ npm run tauri build  # desktop app bundle
 - `npm run tauri build` - desktop production build
 - `npm run searxng:up|down|logs` - helper scripts for local SearXNG
 
+## Windows Installer + Optional SearXNG
+
+- Production desktop installers are generated with `npm run tauri build`.
+- On Windows NSIS setup, users are prompted whether to install local SearXNG.
+- If accepted, installer opens a terminal-based PowerShell flow that:
+  - checks Docker availability
+  - runs `docker compose -f docker-compose.searxng.yml up -d`
+  - confirms `http://127.0.0.1:8080` endpoint
+- SearXNG remains optional; app install succeeds regardless.
+
 ## Project Layout
 
 - `src/` React app (terminal UI, hooks, voice UI)

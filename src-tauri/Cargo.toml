@@ -31,6 +31,5 @@ rmcp = { version = "1.4.0", features = [
     "transport-child-process",
     "which-command",
 ] }
-whisper-rs = { version = "0.16.0", default-features = false }
 
 
