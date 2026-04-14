@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createMarkdownAnsiStream } from "../markdown";
 
 export type ChatMessage = {
   role: "user" | "assistant" | "tool";
@@ -38,6 +39,7 @@ export function useChat(
   messagesRef.current = messages;
   const streamBuf = useRef("");
   const lastSpeakReplyRef = useRef(false);
+  const mdStream = useRef(createMarkdownAnsiStream());
 
   useEffect(() => {
     let cancelled = false;
@@ -54,11 +56,13 @@ export function useChat(
           const chunk = typeof e.payload === "string" ? e.payload : "";
           if (!chunk) return;
           streamBuf.current += chunk;
-          onToken(chunk);
+          onToken(mdStream.current.push(chunk));
         }),
       );
       register(
         await listen("done", (e) => {
+          const mdTail = mdStream.current.flush();
+          if (mdTail) onToken(mdTail);
           const fromStream = streamBuf.current;
           streamBuf.current = "";
           const speakReply = lastSpeakReplyRef.current;
@@ -104,6 +108,8 @@ export function useChat(
       );
       register(
         await listen<string>("error", (e) => {
+          const errTail = mdStream.current.flush();
+          if (errTail) onToken(errTail);
           streamBuf.current = "";
           lastSpeakReplyRef.current = false;
           setBusy(false);
@@ -134,6 +140,7 @@ export function useChat(
     async (text: string, opts?: { speakReply?: boolean }) => {
       const trimmed = text.trim();
       if (!trimmed || busy) return;
+      mdStream.current.reset();
       lastSpeakReplyRef.current = opts?.speakReply ?? false;
       setBusy(true);
       const prev = messagesRef.current;
@@ -152,13 +159,16 @@ export function useChat(
       try {
         await invoke("send_message", payload);
       } catch (e) {
+        const tail = mdStream.current.flush();
+        if (tail) onToken(tail);
+        mdStream.current.reset();
         streamBuf.current = "";
         lastSpeakReplyRef.current = false;
         setBusy(false);
         onError(String(e));
       }
     },
-    [busy, onError],
+    [busy, onError, onToken],
   );
 
   return { busy, messages, sendUserMessage };

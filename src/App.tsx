@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useChat } from "./hooks/useChat";
+import { stripMarkdownForSpeech } from "./markdown";
 import { useMcp } from "./hooks/useMcp";
 import { useVoice } from "./hooks/useVoice";
 import { ACCENT_RGB, T } from "./terminal/renderer";
@@ -10,6 +11,8 @@ import "./styles/terminal.css";
 function App() {
   const termRef = useRef<TerminalHandle>(null);
   const busyRef = useRef(false);
+  /** Half-duplex: keep voice capture off while TTS plays so speakers are not transcribed. */
+  const [ttsPlaying, setTtsPlaying] = useState(false);
 
   const onToken = useCallback((chunk: string) => {
     termRef.current?.write(chunk);
@@ -23,7 +26,8 @@ function App() {
     }) => {
       termRef.current?.write("\r\n");
       termRef.current?.writePrompt();
-      const raw = meta.ttsText.trim() || meta.assistantText.trim();
+      const raw =
+        stripMarkdownForSpeech(meta.ttsText.trim() || meta.assistantText.trim());
       if (meta.speakReply && raw) {
         const max = 6000;
         const chars = [...raw];
@@ -31,12 +35,19 @@ function App() {
           chars.length > max
             ? `${chars.slice(0, max).join("")}…`
             : chars.join("");
-        void invoke("speak", { text: t }).catch((err) => {
-          termRef.current?.write(
-            `\r\n${T.subtle}[voice] Speech playback failed: ${String(err)}\x1b[0m\r\n`,
-          );
-          termRef.current?.writePrompt();
-        });
+        setTtsPlaying(true);
+        void (async () => {
+          try {
+            await invoke("speak", { text: t });
+          } catch (err) {
+            termRef.current?.write(
+              `\r\n${T.subtle}[voice] Speech playback failed: ${String(err)}\x1b[0m\r\n`,
+            );
+            termRef.current?.writePrompt();
+          } finally {
+            setTtsPlaying(false);
+          }
+        })();
       }
     },
     [],
@@ -66,12 +77,13 @@ function App() {
     onToolResult,
   );
 
-  busyRef.current = busy;
+  const voiceAssistantBusy = busy || ttsPlaying;
+  busyRef.current = voiceAssistantBusy;
 
   useMcp();
 
   const { voicePanel, voiceActive } = useVoice({
-    assistantBusy: busy,
+    assistantBusy: voiceAssistantBusy,
     onRecordingStart: () => {
       const t = termRef.current;
       if (!t) return;

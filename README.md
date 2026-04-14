@@ -5,6 +5,13 @@ It provides a terminal-style chat UI, streamed model responses, MCP tool-calling
 
 ## Latest Release Notes
 
+### 2026-04-14
+
+- Improved terminal markdown rendering during streaming responses (bold/code markers no longer print as raw symbols).
+- TTS now strips markdown syntax before speaking, so replies sound natural (no spoken `**`/formatting tokens).
+- Voice capture now stays paused while assistant TTS is playing to avoid transcribing speaker playback/background echo.
+- Started voice backend migration by adding `whisper-rs` and removing the legacy `elevenlabs.rs` module.
+
 ### 2026-04-13
 
 - Added **system tray mode** with `Show OpenJarvis` and `Quit` actions.
